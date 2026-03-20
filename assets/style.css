@@ -1,0 +1,86 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b0b0b;
+    color: #fff;
+}
+
+.container {
+    width: 90%;
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+.topbar {
+    background: #1c1c1c;
+    padding: 16px 0;
+}
+
+.nav-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    color: orange;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 28px;
+}
+
+.nav-links a {
+    color: #fff;
+    text-decoration: none;
+    margin-left: 16px;
+}
+
+.card {
+    margin-top: 30px;
+}
+
+h1 {
+    color: orange;
+    margin-bottom: 16px;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cell {
+    width: 100px;
+    height: 100px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.btn {
+    padding: 10px 16px;
+    background: orange;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 16px;
+    font-weight: bold;
+}
+
+.status-box,
+.message-box {
+    margin-top: 12px;
+}
