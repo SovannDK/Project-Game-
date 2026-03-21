@@ -1,62 +1,67 @@
 <?php
-require_once 'includes/auth.php';
-requireLogin();
-require_once 'init/init.php';
-require_once 'includes/functions.php';
-include 'includes/header.php';
+require_once __DIR__ . '/../init/init.php';
+require_once __DIR__ . '/../init/db.init.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-$user = getUserById($conn, $_SESSION['user_id']);
-$ranking = getRankingData($conn);
-$rankNumber = 1;
-$myRank = '-';
+$pageTitle = 'Ranking - XO Arena';
+$rankings = getRanking($pdo, 50);
 
-while ($row = mysqli_fetch_assoc($ranking)) {
-    if ((int)$row['user_id'] === (int)$_SESSION['user_id']) {
-        $myRank = $rankNumber;
-        break;
-    }
-    $rankNumber++;
-}
-
-$sqlStats = "SELECT * FROM user_stats WHERE user_id = ?;";
-$stmtStats = mysqli_stmt_init($conn);
-mysqli_stmt_prepare($stmtStats, $sqlStats);
-mysqli_stmt_bind_param($stmtStats, "i", $_SESSION['user_id']);
-mysqli_stmt_execute($stmtStats);
-$statsResult = mysqli_stmt_get_result($stmtStats);
-$stats = mysqli_fetch_assoc($statsResult);
-mysqli_stmt_close($stmtStats);
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<section class="card">
-    <div class="profile-top">
-        <img class="avatar-large" src="<?php echo getPhotoPath($user['photo']); ?>" alt="Profile">
-        <div>
-            <h2>Welcome, <?php echo htmlspecialchars($user['name']); ?></h2>
-            <p>Email: <?php echo htmlspecialchars($user['email']); ?></p>
-            <p>Role: <?php echo htmlspecialchars($user['role']); ?></p>
-            <p>My Rank: <?php echo $myRank; ?></p>
-        </div>
-    </div>
-</section>
+<div class="ranking-page">
+    <div class="ranking-container">
+        <h1 class="page-title">🏆 Leaderboard</h1>
+        <p class="page-subtitle">Top XO Arena Players</p>
 
-<section class="card stats-grid">
-    <div class="stat-box"><strong>Wins</strong><span><?php echo $stats['wins'] ?? 0; ?></span></div>
-    <div class="stat-box"><strong>Losses</strong><span><?php echo $stats['losses'] ?? 0; ?></span></div>
-    <div class="stat-box"><strong>Draws</strong><span><?php echo $stats['draws'] ?? 0; ?></span></div>
-    <div class="stat-box"><strong>Total Games</strong><span><?php echo $stats['total_games'] ?? 0; ?></span></div>
-    <div class="stat-box"><strong>Score</strong><span><?php echo $stats['score'] ?? 0; ?></span></div>
-</section>
-
-<section class="card">
-    <h3>Quick Links</h3>
-    <div class="button-row">
-        <a class="btn link-btn" href="index.php">Play Game</a>
-        <a class="btn link-btn" href="profile.php">My Profile</a>
-        <?php if ($_SESSION['role'] === 'admin'): ?>
-            <a class="btn link-btn" href="pages/User/list.php">Manage Users</a>
+        <?php if (empty($rankings)): ?>
+            <div class="empty-state">
+                <p>No games played yet. Be the first to compete!</p>
+                <a href="<?php echo BASE_URL; ?>index.php" class="btn btn-primary">Play Now</a>
+            </div>
+        <?php else: ?>
+            <div class="ranking-table-wrapper">
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Wins</th>
+                            <th>Losses</th>
+                            <th>Draws</th>
+                            <th>Games</th>
+                            <th>Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rankings as $i => $player): ?>
+                            <tr class="<?php echo $i < 3 ? 'rank-top rank-' . ($i + 1) : ''; ?>
+                                       <?php echo (isLoggedIn() && $player['user_id'] == getCurrentUserId()) ? 'rank-me' : ''; ?>">
+                                <td class="rank-num">
+                                    <?php
+                                    if ($i === 0) echo '🥇';
+                                    elseif ($i === 1) echo '🥈';
+                                    elseif ($i === 2) echo '🥉';
+                                    else echo $i + 1;
+                                    ?>
+                                </td>
+                                <td class="rank-player">
+                                    <img src="<?php echo BASE_URL; ?>assets/uploads/profiles/<?php echo htmlspecialchars($player['photo']); ?>"
+                                         alt="" class="rank-avatar">
+                                    <span><?php echo htmlspecialchars($player['name']); ?></span>
+                                </td>
+                                <td class="rank-wins"><?php echo $player['wins']; ?></td>
+                                <td class="rank-losses"><?php echo $player['losses']; ?></td>
+                                <td><?php echo $player['draws']; ?></td>
+                                <td><?php echo $player['total_games']; ?></td>
+                                <td class="rank-winrate"><?php echo $player['win_rate']; ?>%</td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php endif; ?>
     </div>
-</section>
+</div>
 
-<?php include 'includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

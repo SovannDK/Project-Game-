@@ -1,11 +1,5 @@
 <?php
-$serverName = "localhost";
-$dbUserName = "root";
-$dbPassword = "";
-$dbName = "game_xo";
+// This file initializes the database connection
+// Include this after init.php in pages that need DB access
 
-$conn = mysqli_connect($serverName, $dbUserName, $dbPassword, $dbName);
-
-if (!$conn) {
-    die("Connection failed: " . mysqli_connect_error());
-}
+require_once __DIR__ . '/../includes/db.php';

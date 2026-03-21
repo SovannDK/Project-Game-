@@ -1,23 +1,6 @@
 <?php
-function cleanInput($data)
-{
-    return htmlspecialchars(trim($data));
-}
+// Master functions loader
+// This file includes all function files so pages only need one include
 
-function getPhotoPath($photo)
-{
-    if (!empty($photo) && file_exists(__DIR__ . '/../assets/img/' . $photo)) {
-        return 'assets/img/' . $photo;
-    }
-
-    return 'assets/img/default.png';
-}
-
-function getAdminPhotoPath($photo)
-{
-    if (!empty($photo) && file_exists(__DIR__ . '/../assets/img/' . $photo)) {
-        return '../../assets/img/' . $photo;
-    }
-
-    return '../../assets/img/default.png';
-}
+require_once __DIR__ . '/../init/func/auth.func.init.php';
+require_once __DIR__ . '/../init/func/user.func.init.php';

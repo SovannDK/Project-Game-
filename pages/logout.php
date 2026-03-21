@@ -1,6 +1,9 @@
 <?php
+require_once __DIR__ . '/../init/init.php';
+require_once __DIR__ . '/../includes/functions.php';
+
+logoutUser();
+// Start new session for flash message
 session_start();
-session_unset();
-session_destroy();
-header('Location: login.php?success=logout');
-exit();
+setFlash('success', 'Logged out successfully.');
+redirect('pages/login.php');

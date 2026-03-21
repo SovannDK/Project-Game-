@@ -1,32 +1,30 @@
 <?php
-require_once '../../includes/auth.php';
-requireAdminFromUserPage();
-require_once '../../init/init.php';
-require_once '../../includes/functions.php';
+require_once __DIR__ . '/../../init/init.php';
+require_once __DIR__ . '/../../init/db.init.php';
+require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Admin only
+if (!isAdmin()) {
+    setFlash('error', 'Admin access only.');
+    redirect('index.php');
 }
 
-$users = getAllUsers($conn);
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User List</title>
-    <link rel="stylesheet" href="../../assets/style.css">
-</head>
-<body>
-    <main class="container">
-        <section class="card">
-            <div class="page-head">
-                <h2>User List</h2>
-                <a class="btn link-btn" href="create.php">Create User</a>
-            </div>
+$pageTitle = 'Admin: Users - XO Arena';
+$users = getAllUsers($pdo);
 
-            <table class="data-table">
+require_once __DIR__ . '/../../includes/header.php';
+?>
+
+<div class="admin-page">
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1 class="page-title">Admin: User Management</h1>
+            <a href="<?php echo BASE_URL; ?>pages/User/create.php" class="btn btn-primary">+ Add User</a>
+        </div>
+
+        <div class="ranking-table-wrapper">
+            <table class="ranking-table admin-table">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -34,38 +32,43 @@ $users = getAllUsers($conn);
                         <th>Name</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>Wins</th>
-                        <th>Losses</th>
-                        <th>Draws</th>
-                        <th>Score</th>
-                        <th>Action</th>
+                        <th>W/L/D</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($user = mysqli_fetch_assoc($users)): ?>
+                    <?php foreach ($users as $u): ?>
                         <tr>
-                            <td><?php echo $user['user_id']; ?></td>
-                            <td><img class="table-avatar" src="<?php echo getAdminPhotoPath($user['photo']); ?>" alt="Photo"></td>
-                            <td><?php echo htmlspecialchars($user['name']); ?></td>
-                            <td><?php echo htmlspecialchars($user['email']); ?></td>
-                            <td><?php echo htmlspecialchars($user['role']); ?></td>
-                            <td><?php echo $user['wins'] ?? 0; ?></td>
-                            <td><?php echo $user['losses'] ?? 0; ?></td>
-                            <td><?php echo $user['draws'] ?? 0; ?></td>
-                            <td><?php echo $user['score'] ?? 0; ?></td>
+                            <td><?php echo $u['user_id']; ?></td>
                             <td>
-                                <a class="table-link" href="update.php?user_id=<?php echo $user['user_id']; ?>">Update</a>
-                                <a class="table-link danger-link" href="delete.php?user_id=<?php echo $user['user_id']; ?>" onclick="return confirm('Delete this user?');">Delete</a>
+                                <img src="<?php echo BASE_URL; ?>assets/uploads/profiles/<?php echo htmlspecialchars($u['photo']); ?>"
+                                     class="rank-avatar" alt="">
+                            </td>
+                            <td><?php echo htmlspecialchars($u['name']); ?></td>
+                            <td><?php echo htmlspecialchars($u['email']); ?></td>
+                            <td>
+                                <span class="role-badge role-<?php echo $u['role']; ?>">
+                                    <?php echo ucfirst($u['role']); ?>
+                                </span>
+                            </td>
+                            <td><?php echo $u['wins'] . '/' . $u['losses'] . '/' . $u['draws']; ?></td>
+                            <td><?php echo date('M d, Y', strtotime($u['created_at'])); ?></td>
+                            <td class="action-cell">
+                                <a href="<?php echo BASE_URL; ?>pages/User/update.php?id=<?php echo $u['user_id']; ?>"
+                                   class="btn btn-small btn-secondary">Edit</a>
+                                <?php if ($u['user_id'] != getCurrentUserId()): ?>
+                                    <a href="<?php echo BASE_URL; ?>pages/User/delete.php?id=<?php echo $u['user_id']; ?>"
+                                       class="btn btn-small btn-danger"
+                                       onclick="return confirm('Delete user <?php echo htmlspecialchars($u['name']); ?>?')">Delete</a>
+                                <?php endif; ?>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
 
-            <div class="button-row">
-                <a class="btn link-btn" href="../../dashboard.php">Back Dashboard</a>
-            </div>
-        </section>
-    </main>
-</body>
-</html>
+<?php require_once __DIR__ . '/../../includes/footer.php'; ?>

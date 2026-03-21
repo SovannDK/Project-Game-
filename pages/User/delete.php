@@ -1,19 +1,20 @@
 <?php
-require_once '../../includes/auth.php';
-requireAdminFromUserPage();
-require_once '../../init/init.php';
-require_once '../../includes/functions.php';
+require_once __DIR__ . '/../../init/init.php';
+require_once __DIR__ . '/../../init/db.init.php';
+require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
-$userId = $_GET['user_id'] ?? 0;
-$user = getUserById($conn, $userId);
-
-if ($user) {
-    if ($user['photo'] !== 'default.png' && file_exists('../../assets/img/' . $user['photo'])) {
-        unlink('../../assets/img/' . $user['photo']);
-    }
-
-    deleteUserData($conn, $userId);
+if (!isAdmin()) {
+    setFlash('error', 'Admin access only.');
+    redirect('index.php');
 }
 
-header('Location: list.php');
-exit();
+$id = intval($_GET['id'] ?? 0);
+if ($id <= 0) {
+    setFlash('error', 'Invalid user.');
+    redirect('pages/User/list.php');
+}
+
+$result = deleteUser($pdo, $id);
+setFlash($result['success'] ? 'success' : 'error', $result['message']);
+redirect('pages/User/list.php');
