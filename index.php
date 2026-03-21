@@ -5,6 +5,17 @@ require_once __DIR__ . '/includes/functions.php';
 
 $pageTitle = 'XO Arena - Play';
 
+// Check if logged-in user is banned
+$isBanned = false;
+$bannedUntilTime = '';
+if (isLoggedIn()) {
+    $banCheck = isUserBanned($pdo, getCurrentUserId());
+    if ($banCheck !== false) {
+        $isBanned = true;
+        $bannedUntilTime = $banCheck;
+    }
+}
+
 // Handle AJAX game result save
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_result') {
     header('Content-Type: application/json');
@@ -45,6 +56,15 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </div>
         </div>
+        <?php if ($isBanned): ?>
+            <div class="alert alert-error" style="text-align:center; margin-bottom:20px; padding:20px;">
+                <strong>You are banned from playing!</strong><br>
+                Ban expires:
+               Ban expires: <?php date_default_timezone_set('Asia/Phnom_Penh'); echo date('M d, Y h:i A', strtotime($bannedUntilTime)); ?>
+            </div>
+        <?php endif; ?>
+
+
 
         <div class="game-board" id="gameBoard">
             <div class="cell" data-index="0"></div>
@@ -84,7 +104,8 @@ require_once __DIR__ . '/includes/header.php';
         <div class="modal-box">
             <h2 class="modal-title">Nice Game!</h2>
             <p class="modal-text" id="modalResultText"></p>
-            <p class="modal-cta">Create an account to <strong>save your scores</strong> and compete on the leaderboard!</p>
+            <p class="modal-cta">Create an account to <strong>save your scores</strong> and compete on the leaderboard!
+            </p>
             <div class="modal-actions">
                 <a href="<?php echo BASE_URL; ?>pages/register.php" class="btn btn-primary">Create Account</a>
                 <a href="<?php echo BASE_URL; ?>pages/login.php" class="btn btn-secondary">Login</a>
@@ -95,179 +116,181 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <script>
-// ========================
-// XO GAME ENGINE
-// ========================
-const IS_LOGGED_IN = <?php echo isLoggedIn() ? 'true' : 'false'; ?>;
-const BASE_URL = '<?php echo BASE_URL; ?>';
+    // ========================
+    // XO GAME ENGINE
+    // ========================
+    const IS_LOGGED_IN = <?php echo isLoggedIn() ? 'true' : 'false'; ?>;
+    const IS_BANNED = <?php echo $isBanned ? 'true' : 'false'; ?>;
+    const BASE_URL = '<?php echo BASE_URL; ?>';
 
-let board = ['', '', '', '', '', '', '', '', ''];
-let currentPlayer = 'X'; // Player is always X
-let gameActive = true;
-let scoreX = 0, scoreO = 0, scoreDraw = 0;
 
-const winConditions = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
-    [0, 4, 8], [2, 4, 6]             // diagonals
-];
+    let board = ['', '', '', '', '', '', '', '', ''];
+    let currentPlayer = 'X'; // Player is always X
+    let gameActive = true;
+    let scoreX = 0, scoreO = 0, scoreDraw = 0;
 
-const cells = document.querySelectorAll('.cell');
-const statusEl = document.getElementById('gameStatus');
+    const winConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
+        [0, 4, 8], [2, 4, 6]             // diagonals
+    ];
 
-cells.forEach(cell => {
-    cell.addEventListener('click', () => handleCellClick(cell));
-});
+    const cells = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('gameStatus');
 
-function handleCellClick(cell) {
-    const index = cell.dataset.index;
-    if (board[index] !== '' || !gameActive || currentPlayer !== 'X') return;
-
-    makeMove(index, 'X');
-
-    if (gameActive) {
-        currentPlayer = 'O';
-        statusEl.innerHTML = 'Bot is thinking...';
-        setTimeout(botMove, 400);
-    }
-}
-
-function makeMove(index, player) {
-    board[index] = player;
-    const cell = cells[index];
-    cell.textContent = player;
-    cell.classList.add(player === 'X' ? 'x-played' : 'o-played');
-
-    if (checkWin(player)) {
-        gameActive = false;
-        highlightWin(player);
-        if (player === 'X') {
-            scoreX++;
-            document.getElementById('scoreX').textContent = scoreX;
-            statusEl.innerHTML = '🎉 <span class="x-mark">You Win!</span>';
-            saveResult('win');
-        } else {
-            scoreO++;
-            document.getElementById('scoreO').textContent = scoreO;
-            statusEl.innerHTML = '😔 <span class="o-mark">Bot Wins!</span>';
-            saveResult('loss');
-        }
-        return;
-    }
-
-    if (board.every(cell => cell !== '')) {
-        gameActive = false;
-        scoreDraw++;
-        document.getElementById('scoreDraw').textContent = scoreDraw;
-        statusEl.innerHTML = '🤝 It\'s a Draw!';
-        saveResult('draw');
-        return;
-    }
-}
-
-function checkWin(player) {
-    return winConditions.some(condition =>
-        condition.every(index => board[index] === player)
-    );
-}
-
-function highlightWin(player) {
-    winConditions.forEach(condition => {
-        if (condition.every(index => board[index] === player)) {
-            condition.forEach(index => {
-                cells[index].classList.add('winning');
-            });
-        }
+    cells.forEach(cell => {
+        cell.addEventListener('click', () => handleCellClick(cell));
     });
-}
 
-// ========================
-// BOT AI (Minimax)
-// ========================
-function botMove() {
-    if (!gameActive) return;
+    function handleCellClick(cell) {
+        const index = cell.dataset.index;
+        if (board[index] !== '' || !gameActive || currentPlayer !== 'X' || IS_BANNED) return;
 
-    const bestMove = getBestMove();
-    makeMove(bestMove, 'O');
+        makeMove(index, 'X');
 
-    if (gameActive) {
+        if (gameActive) {
+            currentPlayer = 'O';
+            statusEl.innerHTML = 'Bot is thinking...';
+            setTimeout(botMove, 400);
+        }
+    }
+
+    function makeMove(index, player) {
+        board[index] = player;
+        const cell = cells[index];
+        cell.textContent = player;
+        cell.classList.add(player === 'X' ? 'x-played' : 'o-played');
+
+        if (checkWin(player)) {
+            gameActive = false;
+            highlightWin(player);
+            if (player === 'X') {
+                scoreX++;
+                document.getElementById('scoreX').textContent = scoreX;
+                statusEl.innerHTML = '🎉 <span class="x-mark">You Win!</span>';
+                saveResult('win');
+            } else {
+                scoreO++;
+                document.getElementById('scoreO').textContent = scoreO;
+                statusEl.innerHTML = '😔 <span class="o-mark">Bot Wins!</span>';
+                saveResult('loss');
+            }
+            return;
+        }
+
+        if (board.every(cell => cell !== '')) {
+            gameActive = false;
+            scoreDraw++;
+            document.getElementById('scoreDraw').textContent = scoreDraw;
+            statusEl.innerHTML = '🤝 It\'s a Draw!';
+            saveResult('draw');
+            return;
+        }
+    }
+
+    function checkWin(player) {
+        return winConditions.some(condition =>
+            condition.every(index => board[index] === player)
+        );
+    }
+
+    function highlightWin(player) {
+        winConditions.forEach(condition => {
+            if (condition.every(index => board[index] === player)) {
+                condition.forEach(index => {
+                    cells[index].classList.add('winning');
+                });
+            }
+        });
+    }
+
+    // ========================
+    // BOT AI (Minimax)
+    // ========================
+    function botMove() {
+        if (!gameActive) return;
+
+        const bestMove = getBestMove();
+        makeMove(bestMove, 'O');
+
+        if (gameActive) {
+            currentPlayer = 'X';
+            statusEl.innerHTML = 'Your turn! You are <span class="x-mark">X</span>';
+        }
+    }
+
+    function getBestMove() {
+        // Try to win
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === '') {
+                board[i] = 'O';
+                if (checkWin('O')) { board[i] = ''; return i; }
+                board[i] = '';
+            }
+        }
+        // Block player
+        for (let i = 0; i < 9; i++) {
+            if (board[i] === '') {
+                board[i] = 'X';
+                if (checkWin('X')) { board[i] = ''; return i; }
+                board[i] = '';
+            }
+        }
+        // Center
+        if (board[4] === '') return 4;
+        // Corners
+        const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+        if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+        // Any
+        const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+        return available[Math.floor(Math.random() * available.length)];
+    }
+
+    // ========================
+    // SAVE & MODAL
+    // ========================
+    function saveResult(result) {
+        if (IS_LOGGED_IN) {
+            // Save to server
+            fetch(BASE_URL + 'index.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=save_result&result=${result}`
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Score saved!');
+                    }
+                })
+                .catch(err => console.error(err));
+        } else {
+            // Show register prompt after short delay
+            setTimeout(() => {
+                const modal = document.getElementById('registerModal');
+                const resultText = document.getElementById('modalResultText');
+                if (result === 'win') resultText.textContent = 'You won! 🎉';
+                else if (result === 'loss') resultText.textContent = 'Bot wins this round!';
+                else resultText.textContent = 'It\'s a draw!';
+                modal.style.display = 'flex';
+            }, 800);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('registerModal').style.display = 'none';
+    }
+
+    function restartGame() {
+        board = ['', '', '', '', '', '', '', '', ''];
+        gameActive = true;
         currentPlayer = 'X';
+        cells.forEach(cell => {
+            cell.textContent = '';
+            cell.className = 'cell';
+        });
         statusEl.innerHTML = 'Your turn! You are <span class="x-mark">X</span>';
     }
-}
-
-function getBestMove() {
-    // Try to win
-    for (let i = 0; i < 9; i++) {
-        if (board[i] === '') {
-            board[i] = 'O';
-            if (checkWin('O')) { board[i] = ''; return i; }
-            board[i] = '';
-        }
-    }
-    // Block player
-    for (let i = 0; i < 9; i++) {
-        if (board[i] === '') {
-            board[i] = 'X';
-            if (checkWin('X')) { board[i] = ''; return i; }
-            board[i] = '';
-        }
-    }
-    // Center
-    if (board[4] === '') return 4;
-    // Corners
-    const corners = [0, 2, 6, 8].filter(i => board[i] === '');
-    if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
-    // Any
-    const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
-    return available[Math.floor(Math.random() * available.length)];
-}
-
-// ========================
-// SAVE & MODAL
-// ========================
-function saveResult(result) {
-    if (IS_LOGGED_IN) {
-        // Save to server
-        fetch(BASE_URL + 'index.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=save_result&result=${result}`
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Score saved!');
-            }
-        })
-        .catch(err => console.error(err));
-    } else {
-        // Show register prompt after short delay
-        setTimeout(() => {
-            const modal = document.getElementById('registerModal');
-            const resultText = document.getElementById('modalResultText');
-            if (result === 'win') resultText.textContent = 'You won! 🎉';
-            else if (result === 'loss') resultText.textContent = 'Bot wins this round!';
-            else resultText.textContent = 'It\'s a draw!';
-            modal.style.display = 'flex';
-        }, 800);
-    }
-}
-
-function closeModal() {
-    document.getElementById('registerModal').style.display = 'none';
-}
-
-function restartGame() {
-    board = ['', '', '', '', '', '', '', '', ''];
-    gameActive = true;
-    currentPlayer = 'X';
-    cells.forEach(cell => {
-        cell.textContent = '';
-        cell.className = 'cell';
-    });
-    statusEl.innerHTML = 'Your turn! You are <span class="x-mark">X</span>';
-}
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

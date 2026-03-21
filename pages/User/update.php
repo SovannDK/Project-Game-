@@ -56,6 +56,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             break;
 
+        case 'ban_user':
+            $duration = $_POST['ban_duration'] ?? '';
+            if (empty($duration)) {
+                $error = 'Please select a ban duration.';
+            } else {
+                $result = banUser($pdo, $id, $duration);
+                if ($result['success']) {
+                    $success = $result['message'];
+                    $user = getUserById($pdo, $id);
+                } else {
+                    $error = $result['message'];
+                }
+            }
+            break;
+
+        case 'unban_user':
+            $result = unbanUser($pdo, $id);
+            $success = $result['message'];
+            $user = getUserById($pdo, $id);
+            break;
+
         case 'update_photo':
             if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
                 // Temporarily override session for this user
@@ -135,12 +156,12 @@ require_once __DIR__ . '/../../includes/header.php';
             <div class="profile-sidebar">
                 <div class="profile-photo-section">
                     <img src="<?php echo BASE_URL; ?>assets/uploads/profiles/<?php echo htmlspecialchars($user['photo']); ?>"
-                         alt="Profile" class="profile-photo-large">
+                        alt="Profile" class="profile-photo-large">
                     <form method="POST" enctype="multipart/form-data" class="photo-form">
                         <input type="hidden" name="action" value="update_photo">
                         <label for="photoInput" class="btn btn-small btn-secondary">Change Photo</label>
                         <input type="file" id="photoInput" name="photo" accept="image/*" style="display:none"
-                               onchange="this.form.submit()">
+                            onchange="this.form.submit()">
                     </form>
                     <?php if ($user['photo'] !== DEFAULT_PHOTO): ?>
                         <form method="POST" style="margin-top:5px;">
@@ -153,15 +174,21 @@ require_once __DIR__ . '/../../includes/header.php';
                 <div class="profile-stats">
                     <h3>Stats</h3>
                     <div class="stat-grid">
-                        <div class="stat-item"><span class="stat-num"><?php echo $user['total_games']; ?></span><span class="stat-label">Games</span></div>
-                        <div class="stat-item stat-win"><span class="stat-num"><?php echo $user['wins']; ?></span><span class="stat-label">Wins</span></div>
-                        <div class="stat-item stat-loss"><span class="stat-num"><?php echo $user['losses']; ?></span><span class="stat-label">Losses</span></div>
-                        <div class="stat-item stat-draw"><span class="stat-num"><?php echo $user['draws']; ?></span><span class="stat-label">Draws</span></div>
+                        <div class="stat-item"><span class="stat-num"><?php echo $user['total_games']; ?></span><span
+                                class="stat-label">Games</span></div>
+                        <div class="stat-item stat-win"><span class="stat-num"><?php echo $user['wins']; ?></span><span
+                                class="stat-label">Wins</span></div>
+                        <div class="stat-item stat-loss"><span
+                                class="stat-num"><?php echo $user['losses']; ?></span><span
+                                class="stat-label">Losses</span></div>
+                        <div class="stat-item stat-draw"><span
+                                class="stat-num"><?php echo $user['draws']; ?></span><span
+                                class="stat-label">Draws</span></div>
                     </div>
                     <form method="POST" style="margin-top:10px;">
                         <input type="hidden" name="action" value="reset_stats">
                         <button type="submit" class="btn btn-small btn-danger btn-full"
-                                onclick="return confirm('Reset all stats for this user?')">Reset Stats</button>
+                            onclick="return confirm('Reset all stats for this user?')">Reset Stats</button>
                     </form>
                 </div>
             </div>
@@ -174,11 +201,13 @@ require_once __DIR__ . '/../../includes/header.php';
                         <input type="hidden" name="action" value="update_info">
                         <div class="form-group">
                             <label>Username</label>
-                            <input type="text" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
+                            <input type="text" name="name" value="<?php echo htmlspecialchars($user['name']); ?>"
+                                required>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                            <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>"
+                                required>
                         </div>
                         <button type="submit" class="btn btn-primary">Save</button>
                     </form>
@@ -190,12 +219,51 @@ require_once __DIR__ . '/../../includes/header.php';
                         <input type="hidden" name="action" value="update_role">
                         <div class="form-group">
                             <select name="role" class="form-select">
-                                <option value="user" <?php echo $user['role'] === 'user' ? 'selected' : ''; ?>>User</option>
-                                <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
+                                <option value="user" <?php echo $user['role'] === 'user' ? 'selected' : ''; ?>>User
+                                </option>
+                                <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin
+                                </option>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary">Update Role</button>
                     </form>
+                </div>
+
+                <div class="profile-card">
+                    <h2>Ban User</h2>
+                    <?php
+                    $banStatus = isUserBanned($pdo, $id);
+                    if ($banStatus !== false): ?>
+                        <div class="alert alert-error">
+                            Currently banned until: <?php echo date('M d, Y h:i A', strtotime($banStatus)); ?>
+                        </div>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="unban_user">
+                            <button type="submit" class="btn btn-primary">Unban Now</button>
+                        </form>
+                    <?php else: ?>
+                        <form method="POST" class="profile-form">
+                            <input type="hidden" name="action" value="ban_user">
+                            <div class="form-group">
+                                <label>Ban Duration</label>
+                                <select name="ban_duration" class="form-select">
+                                    <option value="">-- Select --</option>
+                                    <option value="5 minutes">5 Minutes</option>
+                                    <option value="15 minutes">15 Minutes</option>
+                                    <option value="30 minutes">30 Minutes</option>
+                                    <option value="1 hour">1 Hour</option>
+                                    <option value="2 hours">2 Hours</option>
+                                    <option value="6 hours">6 Hours</option>
+                                    <option value="12 hours">12 Hours</option>
+                                    <option value="1 day">1 Day</option>
+                                    <option value="3 days">3 Days</option>
+                                    <option value="7 days">7 Days</option>
+                                    <option value="30 days">30 Days</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-danger">Ban User</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
                 <div class="profile-card">

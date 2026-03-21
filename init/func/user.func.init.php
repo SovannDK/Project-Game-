@@ -235,3 +235,54 @@ function updateUserRole($pdo, $id, $role) {
     $stmt->execute([$role, $id]);
     return ['success' => true, 'message' => 'Role updated.'];
 }
+
+/**
+ * Ban a user for a specific duration
+ * $duration examples: '1 hour', '2 hours', '5 minutes', '30 minutes', '1 day'
+ */
+function banUser($pdo, $id, $duration) {
+    if ($id == getCurrentUserId()) {
+        return ['success' => false, 'message' => 'Cannot ban yourself.'];
+    }
+
+    $bannedUntil = date('Y-m-d H:i:s', strtotime('+' . $duration));
+
+    $stmt = $pdo->prepare("UPDATE users SET banned_until = ? WHERE user_id = ?");
+    $stmt->execute([$bannedUntil, $id]);
+
+    return ['success' => true, 'message' => 'User banned until ' . $bannedUntil];
+}
+
+/**
+ * Unban a user (remove ban immediately)
+ */
+function unbanUser($pdo, $id) {
+    $stmt = $pdo->prepare("UPDATE users SET banned_until = NULL WHERE user_id = ?");
+    $stmt->execute([$id]);
+
+    return ['success' => true, 'message' => 'User unbanned.'];
+}
+
+/**
+ * Check if a user is currently banned
+ * Returns false if not banned, or the banned_until time if banned
+ */
+function isUserBanned($pdo, $id) {
+    $stmt = $pdo->prepare("SELECT banned_until FROM users WHERE user_id = ?");
+    $stmt->execute([$id]);
+    $user = $stmt->fetch();
+
+    if ($user && $user['banned_until'] !== null) {
+        $bannedUntil = strtotime($user['banned_until']);
+        if ($bannedUntil > time()) {
+            return $user['banned_until'];
+        } else {
+            // Ban expired, clear it
+            $stmt = $pdo->prepare("UPDATE users SET banned_until = NULL WHERE user_id = ?");
+            $stmt->execute([$id]);
+            return false;
+        }
+    }
+
+    return false;
+}
