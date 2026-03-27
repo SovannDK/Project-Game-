@@ -3,24 +3,36 @@ require_once __DIR__ . '/../init/init.php';
 require_once __DIR__ . '/../init/db.init.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-// Redirect if already logged in
 if (isLoggedIn()) {
     redirect('index.php');
 }
 
 $pageTitle = 'Login - XO Arena';
-$error = '';
+
+$name_or_email = '';
+$nameErr = $passwordErr = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name_or_email = trim($_POST['name_or_email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $result = loginUser($pdo, $name_or_email, $password);
-    if ($result['success']) {
-        setFlash('success', 'Welcome back, ' . getCurrentUserName() . '!');
-        redirect('index.php');
-    } else {
-        $error = $result['message'];
+    if (empty($name_or_email)) {
+        $nameErr = 'Please enter your username or email!';
+    }
+
+    if (empty($password)) {
+        $passwordErr = 'Please enter your password!';
+    }
+
+    // If no errors, try to login
+    if (empty($nameErr) && empty($passwordErr)) {
+        $result = loginUser($pdo, $name_or_email, $password);
+        if ($result['success']) {
+            setFlash('success', 'Welcome back, ' . getCurrentUserName() . '!');
+            redirect('index.php');
+        } else {
+            $passwordErr = $result['message'];
+        }
     }
 }
 
@@ -34,22 +46,22 @@ require_once __DIR__ . '/../includes/header.php';
             <p>Welcome back, player!</p>
         </div>
 
-        <?php if ($error): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-
         <form method="POST" class="auth-form">
             <div class="form-group">
                 <label for="name_or_email">Username or Email</label>
                 <input type="text" id="name_or_email" name="name_or_email"
-                       value="<?php echo htmlspecialchars($name_or_email ?? ''); ?>"
-                       placeholder="Enter your name or email" required>
+                       value="<?php echo htmlspecialchars($name_or_email); ?>"
+                       placeholder="Enter your name or email"
+                       class="<?php echo empty($nameErr) ? '' : 'is-invalid'; ?>">
+                <div class="invalid-feedback"><?php echo $nameErr; ?></div>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password"
-                       placeholder="Enter your password" required>
+                       placeholder="Enter your password"
+                       class="<?php echo empty($passwordErr) ? '' : 'is-invalid'; ?>">
+                <div class="invalid-feedback"><?php echo $passwordErr; ?></div>
             </div>
 
             <button type="submit" class="btn btn-primary btn-full">Login</button>

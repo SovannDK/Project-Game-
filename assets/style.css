@@ -73,6 +73,7 @@ a:hover {
     color: var(--accent-blue);
 }
 
+
 /* ---- NAVBAR ---- */
 .navbar {
     background: rgba(17, 24, 39, 0.85);
@@ -183,6 +184,7 @@ a:hover {
 .main-content {
     min-height: calc(100vh - 64px - 60px);
 }
+
 
 /* ---- FLASH MESSAGES ---- */
 .flash-message {
@@ -994,4 +996,22 @@ a:hover {
     .modal-box {
         padding: 24px;
     }
+}
+
+/* ---- Field validation (teacher style) ---- */
+input.is-invalid,
+select.is-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.invalid-feedback {
+    color: #ef4444;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.invalid-feedback:empty {
+    display: none;
 }
