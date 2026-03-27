@@ -59,9 +59,36 @@ require_once __DIR__ . '/includes/header.php';
         <?php if ($isBanned): ?>
             <div class="alert alert-error" style="text-align:center; margin-bottom:20px; padding:20px;">
                 <strong>You are banned from playing!</strong><br>
-                Ban expires:
-               Ban expires: <?php date_default_timezone_set('Asia/Phnom_Penh'); echo date('M d, Y h:i A', strtotime($bannedUntilTime)); ?>
+                <span id="banCountdown"
+                    style="font-size:1.5rem; font-family:'Orbitron',monospace; margin-top:10px; display:inline-block;"></span>
             </div>
+            <script>
+                const bannedUntil = new Date("<?php echo date('Y-m-d\TH:i:s', strtotime($bannedUntilTime)); ?>").getTime();
+
+                function updateCountdown() {
+                    const now = new Date().getTime();
+                    const remaining = bannedUntil - now;
+
+                    if (remaining <= 0) {
+                        document.getElementById('banCountdown').textContent = 'Ban expired! Refreshing...';
+                        setTimeout(() => location.reload(), 1500);
+                        return;
+                    }
+
+                    const hours = Math.floor(remaining / (1000 * 60 * 60));
+                    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+                    let timeText = '';
+                    if (hours > 0) timeText += hours + 'h ';
+                    timeText += String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+                    document.getElementById('banCountdown').textContent = timeText;
+                }
+
+                updateCountdown();
+                setInterval(updateCountdown, 1000);
+            </script>
         <?php endif; ?>
 
 

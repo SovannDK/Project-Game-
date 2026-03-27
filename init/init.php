@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Phnom_Penh');
 
 // Base URL - change this to your project URL
 define('BASE_URL', '/PROJECT-BACK/');
